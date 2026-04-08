@@ -199,13 +199,6 @@ export default function CompanyWrappedPage() {
           {data.totalBookings} reservas e R$ {fmt(Math.round(data.totalSpent))} investidos em {label}.
         </p>
       </motion.div>
-      <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        onClick={() => router.push('/')}
-        className="z-10 px-6 min-h-[48px] py-3 rounded-xl font-semibold text-white transition-colors"
-        style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.35)' }}>
-        Nova busca
-      </motion.button>
     </div>,
   ]
 

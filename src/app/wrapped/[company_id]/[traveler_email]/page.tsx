@@ -534,19 +534,6 @@ export default function TravelerWrappedPage() {
         </div>
       </motion.div>
 
-      {/* Actions */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }} className="flex gap-2 flex-col w-full max-w-[260px] z-10">
-        <button onClick={() => router.push(`/wrapped/${companyId}?period=${period}&year=${year}`)}
-          className="text-white px-6 min-h-[44px] py-2.5 rounded-xl font-semibold transition-colors text-sm"
-          style={glassCard}>
-          Ver visão da empresa
-        </button>
-        <button onClick={() => router.push('/')}
-          className="bg-white text-[#2872fa] px-6 min-h-[44px] py-2.5 rounded-xl font-semibold hover:bg-white/90 transition-colors text-sm">
-          Nova busca
-        </button>
-      </motion.div>
     </div>,
   ]
 

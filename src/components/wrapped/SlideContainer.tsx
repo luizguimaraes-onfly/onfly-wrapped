@@ -175,19 +175,6 @@ export function SlideContainer({ slides, onComplete, shareText, captionData }: S
     catch { /* ignore */ }
   }
 
-  const handleDryRun = () => {
-    const text = editableTextRef.current
-    console.log('[DRY RUN] editableText state:', JSON.stringify(editableText))
-    console.log('[DRY RUN] editableTextRef.current:', JSON.stringify(text))
-    console.log('[DRY RUN] shareText prop:', JSON.stringify(shareText))
-    alert(
-      `[DRY RUN — NÃO PUBLICOU]\n\n` +
-      `editableText (state):\n"${editableText}"\n\n` +
-      `editableTextRef.current:\n"${text}"\n\n` +
-      `shareText (prop):\n"${shareText}"`
-    )
-  }
-
   const handlePublish = async () => {
     if (postState !== 'idle') return
     try {
@@ -368,11 +355,6 @@ export function SlideContainer({ slides, onComplete, shareText, captionData }: S
                 <button onClick={handleDownload} disabled={!imageBlob || postState !== 'idle'}
                   className="flex-1 py-2.5 rounded-xl font-semibold text-sm border border-white/20 text-white hover:bg-white/10 transition-colors disabled:opacity-35 disabled:cursor-not-allowed">
                   Baixar
-                </button>
-                <button onClick={handleDryRun} disabled={postState !== 'idle'}
-                  className="flex-1 py-2.5 rounded-xl font-semibold text-sm border border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 transition-colors disabled:opacity-35"
-                  title="Ver payload sem publicar">
-                  🧪 Testar
                 </button>
               </div>
 
