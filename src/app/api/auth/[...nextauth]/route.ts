@@ -65,6 +65,7 @@ const handler = NextAuth({
     },
     async jwt({ token, user }) {
       if (user) {
+        token.userId      = user.id
         token.companyId   = (user as { companyId?: string }).companyId     ?? ''
         token.companyName = (user as { companyName?: string }).companyName ?? ''
         token.accessToken = (user as { accessToken?: string }).accessToken ?? ''
@@ -73,6 +74,7 @@ const handler = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
+        session.user.userId      = token.userId      as string | undefined
         session.user.companyId   = token.companyId   as string | undefined
         session.user.companyName = token.companyName as string | undefined
         session.user.accessToken = token.accessToken as string | undefined

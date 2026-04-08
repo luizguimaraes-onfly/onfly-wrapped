@@ -5,12 +5,14 @@ declare module 'next-auth' {
     companyId?: string
     companyName?: string
     accessToken?: string
+    userId?: string
   }
   interface Session {
     user: {
       companyId?: string
       companyName?: string
       accessToken?: string
+      userId?: string
     } & DefaultSession['user']
   }
 }
@@ -20,5 +22,6 @@ declare module 'next-auth/jwt' {
     companyId?: string
     companyName?: string
     accessToken?: string
+    userId?: string
   }
 }
