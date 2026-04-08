@@ -39,8 +39,9 @@ export async function GET(req: NextRequest) {
     })
     if (!tokenRes.ok) {
       const err = await tokenRes.text()
-      console.error('[auth/onfly] token exchange failed:', err)
-      return fail('token_exchange_failed')
+      console.error('[auth/onfly] token exchange failed:', tokenRes.status, err)
+      console.error('[auth/onfly] redirect_uri sent:', REDIRECT_URI)
+      return fail(`token_exchange_failed__${tokenRes.status}__${encodeURIComponent(err.slice(0, 100))}`)
     }
 
     const { access_token } = await tokenRes.json() as { access_token: string }
