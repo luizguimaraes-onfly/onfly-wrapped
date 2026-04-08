@@ -34,6 +34,8 @@ export default function HomePage() {
   const [companyName, setCompanyName] = useState<string>('')
   const [email, setEmail]             = useState<string>('')
   const [displayName, setDisplayName] = useState<string>('')
+  const [isAdmin, setIsAdmin]         = useState(false)
+  const [searchEmail, setSearchEmail] = useState<string>('')
 
   useEffect(() => {
     if (status !== 'authenticated') return
@@ -59,6 +61,7 @@ export default function HomePage() {
         if (!emp) return
         setEmail(emp.email ?? session?.user?.email ?? '')
         setDisplayName(emp.name ?? emp.first_name ?? emp.email)
+        if (String(emp.id) === '67176') setIsAdmin(true)
         if (emp.company?.id) {
           setCompanyId(String(emp.company.id))
           setCompanyName(emp.company.social_name ?? emp.company.name ?? '')
@@ -69,7 +72,8 @@ export default function HomePage() {
   }, [status, session])
 
   const goCompany  = () => companyId && router.push(`/wrapped/${companyId}?period=${period}&year=${year}`)
-  const goTraveler = () => companyId && email && router.push(`/wrapped/${companyId}/${encodeURIComponent(email)}?period=${period}&year=${year}`)
+  const targetEmail = (isAdmin && searchEmail.trim()) ? searchEmail.trim() : email
+  const goTraveler  = () => companyId && targetEmail && router.push(`/wrapped/${companyId}/${encodeURIComponent(targetEmail)}?period=${period}&year=${year}`)
 
   const loading = status === 'loading' || resolving
 
@@ -121,6 +125,21 @@ export default function HomePage() {
               </div>
             </div>
 
+            {/* Admin: busca por outro viajante */}
+            {isAdmin && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-[#0d1b2e]/45 uppercase tracking-wider">Email do viajante</label>
+                <input
+                  type="email"
+                  placeholder={email}
+                  value={searchEmail}
+                  onChange={e => setSearchEmail(e.target.value)}
+                  className="px-3 min-h-[44px] py-2.5 rounded-xl text-sm text-[#0d1b2e] outline-none placeholder:text-[#0d1b2e]/30"
+                  style={{ background: '#ffffff', border: inputBorder }}
+                />
+              </div>
+            )}
+
             {/* Period + Year */}
             <div className="flex gap-3">
               <div className="flex flex-col gap-1 flex-1">
@@ -143,7 +162,7 @@ export default function HomePage() {
 
             {/* Menu */}
             <div className="flex flex-col gap-2.5">
-              <button onClick={goTraveler} disabled={!companyId || !email}
+              <button onClick={goTraveler} disabled={!companyId || !targetEmail}
                 className="w-full min-h-[52px] py-3 rounded-xl font-semibold text-white transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
                 style={primaryButtonStyle}>
                 ✈️ Retrospectiva do Colaborador
