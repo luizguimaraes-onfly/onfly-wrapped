@@ -43,7 +43,10 @@ export async function POST(req: NextRequest) {
   if (!initRes.ok) {
     const body = await initRes.text()
     console.error('[linkedin/upload-image] initializeUpload failed', initRes.status, body)
-    return NextResponse.json({ error: 'UPLOAD_INIT_FAILED' }, { status: 502 })
+    return NextResponse.json(
+      { error: 'UPLOAD_INIT_FAILED', linkedinStatus: initRes.status, linkedinBody: body },
+      { status: 502 }
+    )
   }
 
   const { value } = await initRes.json() as {
