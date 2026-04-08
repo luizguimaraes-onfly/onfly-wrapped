@@ -5,7 +5,7 @@ export const LINKEDIN_CONFIG = {
   USERINFO_URL: 'https://api.linkedin.com/v2/userinfo',
   IMAGES_URL:  'https://api.linkedin.com/rest/images',
   SCOPES:      'openid profile email w_member_social',
-  API_VERSION: '202604',
+  API_VERSION: '202503',
   ACCESS_TOKEN_TTL_SECONDS: 5_184_000, // 60 days
   STATE_COOKIE_MAX_AGE:     600,       // 10 min
   ACCOUNT_COOKIE_MAX_AGE:   5_184_000, // 60 days
