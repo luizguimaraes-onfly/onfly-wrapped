@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate, type MotionValue } from 'framer-motion'
 import { colors, slideContainerShadow } from '@/lib/design'
+import type { LinkedInStatusResponse } from '@/lib/linkedin/types'
 
 const SLIDE_DURATION = 7
 
@@ -25,6 +26,14 @@ const variants = {
   exit:  (dir: number) => ({ x: dir > 0 ? '-12%' : '12%', opacity: 0, scale: 0.98 }),
 }
 
+function LinkedInIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+    </svg>
+  )
+}
+
 function ProgressBar({ state, progress }: { state: 'past' | 'active' | 'future'; progress: MotionValue<number> }) {
   const width = useTransform(progress, v => `${v}%`)
   return (
@@ -44,16 +53,25 @@ export function SlideContainer({ slides, onComplete, shareText, captionData }: S
   const [imageBlob, setImageBlob] = useState<Blob | null>(null)
   const [capturing, setCapturing] = useState(false)
   const [copied, setCopied]       = useState(false)
-  const [aiCaption, setAiCaption]         = useState<string | null>(null)
+  const [aiCaption, setAiCaption]           = useState<string | null>(null)
   const [captionLoading, setCaptionLoading] = useState(false)
+  const [editableText, setEditableText]     = useState<string>('')
+  const [liStatus, setLiStatus]             = useState<LinkedInStatusResponse | null>(null)
+  const [postState, setPostState]           = useState<'idle' | 'uploading' | 'posting' | 'success' | 'error'>('idle')
+  const [postUrl, setPostUrl]               = useState<string | null>(null)
+  const [postError, setPostError]           = useState<string | null>(null)
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  const modalRef     = useRef<HTMLDivElement>(null)
-  const animRef      = useRef<{ stop: () => void; pause: () => void; play: () => void } | null>(null)
-  const goNextRef    = useRef<() => void>(() => {})
+  const containerRef    = useRef<HTMLDivElement>(null)
+  const modalRef        = useRef<HTMLDivElement>(null)
+  const animRef         = useRef<{ stop: () => void; pause: () => void; play: () => void } | null>(null)
+  const goNextRef       = useRef<() => void>(() => {})
+  const editableTextRef = useRef<string>('')
   const progress     = useMotionValue(0)
 
-  const postText = aiCaption ?? shareText ?? '✈️ Esse foi meu ano em viagens corporativas!\n\n#OnflyWrapped #ViagensCorporativas #Onfly'
+  const defaultText = shareText ?? 'Esse foi meu ano em viagens corporativas. Onfly Wrapped. #OnflyWrapped #ViagensCorporativas #Onfly'
+
+  // Keep ref always in sync with displayed text — prevents stale closure in async handlePublish
+  useEffect(() => { editableTextRef.current = editableText }, [editableText])
 
   const goNext = useCallback(() => {
     if (current < slides.length - 1) { setDirection(1); setCurrent(c => c + 1) }
@@ -121,8 +139,21 @@ export function SlideContainer({ slides, onComplete, shareText, captionData }: S
   }, [])
 
   useEffect(() => {
-    if (modalOpen) { const t = setTimeout(captureSlide, 120); return () => clearTimeout(t) }
-  }, [modalOpen, captureSlide])
+    if (!modalOpen) return
+    setPostState('idle')
+    setPostUrl(null)
+    setPostError(null)
+    const initialText = aiCaption ?? defaultText
+    editableTextRef.current = initialText
+    setEditableText(initialText)
+    const t = setTimeout(captureSlide, 120)
+    fetch('/api/auth/linkedin/status')
+      .then(r => r.json())
+      .then((d: LinkedInStatusResponse) => setLiStatus(d))
+      .catch(() => setLiStatus({ connected: false }))
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalOpen])
 
   const handleGenerateCaption = async () => {
     if (!captionData || captionLoading) return
@@ -134,14 +165,69 @@ export function SlideContainer({ slides, onComplete, shareText, captionData }: S
         body: JSON.stringify(captionData),
       })
       const d = await res.json()
-      if (d.text) setAiCaption(d.text)
+      if (d.text) { setAiCaption(d.text); setEditableText(d.text) }
     } catch { /* mantém texto estático */ }
     finally { setCaptionLoading(false) }
   }
 
   const handleCopy = async () => {
-    try { await navigator.clipboard.writeText(postText); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+    try { await navigator.clipboard.writeText(editableText); setCopied(true); setTimeout(() => setCopied(false), 2000) }
     catch { /* ignore */ }
+  }
+
+  const handleDryRun = () => {
+    const text = editableTextRef.current
+    console.log('[DRY RUN] editableText state:', JSON.stringify(editableText))
+    console.log('[DRY RUN] editableTextRef.current:', JSON.stringify(text))
+    console.log('[DRY RUN] shareText prop:', JSON.stringify(shareText))
+    alert(
+      `[DRY RUN — NÃO PUBLICOU]\n\n` +
+      `editableText (state):\n"${editableText}"\n\n` +
+      `editableTextRef.current:\n"${text}"\n\n` +
+      `shareText (prop):\n"${shareText}"`
+    )
+  }
+
+  const handlePublish = async () => {
+    if (postState !== 'idle') return
+    try {
+      let imageUrn: string | undefined
+
+      if (imageBlob) {
+        setPostState('uploading')
+        const reader = new FileReader()
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(imageBlob)
+        })
+        const upRes = await fetch('/api/linkedin/upload-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageDataUrl: dataUrl }),
+        })
+        const upData = await upRes.json() as { imageUrn?: string; error?: string }
+        if (!upRes.ok || !upData.imageUrn) throw new Error(upData.error ?? 'UPLOAD_FAILED')
+        imageUrn = upData.imageUrn
+      }
+
+      setPostState('posting')
+      const textToPost = editableTextRef.current
+      const postRes = await fetch('/api/linkedin/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToPost, imageUrn }),
+      })
+      const postData = await postRes.json() as { postUrl?: string; error?: string }
+      if (!postRes.ok) throw new Error(postData.error ?? 'POST_FAILED')
+
+      setPostUrl(postData.postUrl ?? null)
+      setPostState('success')
+    } catch (err) {
+      console.error('[publish]', err)
+      setPostError(err instanceof Error ? err.message : 'Erro ao publicar')
+      setPostState('error')
+    }
   }
 
   const handleDownload = () => {
@@ -250,7 +336,7 @@ export function SlideContainer({ slides, onComplete, shareText, captionData }: S
               {/* Caption */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-white/40 text-xs uppercase tracking-wider">Texto sugerido</p>
+                  <p className="text-white/40 text-xs uppercase tracking-wider">Texto do post</p>
                   {captionData && (
                     <button onClick={handleGenerateCaption} disabled={captionLoading}
                       className="flex items-center gap-1 text-xs text-[#5a9fff] hover:text-white transition-colors disabled:opacity-50">
@@ -261,29 +347,82 @@ export function SlideContainer({ slides, onComplete, shareText, captionData }: S
                     </button>
                   )}
                 </div>
-                <div className="rounded-xl p-3 text-white/70 text-sm leading-relaxed border border-white/10 whitespace-pre-line max-h-32 overflow-y-auto"
-                  style={{ background: 'rgba(255,255,255,0.05)' }}>{postText}</div>
+                <textarea
+                  value={editableText}
+                  onChange={e => { editableTextRef.current = e.target.value; setEditableText(e.target.value) }}
+                  maxLength={3000}
+                  rows={4}
+                  disabled={postState !== 'idle'}
+                  className="w-full rounded-xl p-3 text-white/80 text-sm leading-relaxed border border-white/10 resize-none outline-none focus:border-white/25 transition-colors disabled:opacity-60"
+                  style={{ background: 'rgba(255,255,255,0.05)' }}
+                />
+                <p className="text-right text-[10px] text-white/20 mt-0.5">{editableText.length}/3000</p>
               </div>
 
-              <div className="flex gap-3">
-                <button onClick={handleCopy}
-                  className="flex-1 py-2.5 rounded-xl font-semibold text-sm border border-white/20 text-white hover:bg-white/10 transition-colors">
-                  {copied ? '✓ Copiado!' : 'Copiar texto'}
+              {/* Secondary actions */}
+              <div className="flex gap-2">
+                <button onClick={handleCopy} disabled={postState !== 'idle'}
+                  className="flex-1 py-2.5 rounded-xl font-semibold text-sm border border-white/20 text-white hover:bg-white/10 transition-colors disabled:opacity-35">
+                  {copied ? '✓ Copiado!' : 'Copiar'}
                 </button>
-                <button onClick={handleDownload} disabled={!imageBlob}
+                <button onClick={handleDownload} disabled={!imageBlob || postState !== 'idle'}
                   className="flex-1 py-2.5 rounded-xl font-semibold text-sm border border-white/20 text-white hover:bg-white/10 transition-colors disabled:opacity-35 disabled:cursor-not-allowed">
-                  Baixar imagem
+                  Baixar
+                </button>
+                <button onClick={handleDryRun} disabled={postState !== 'idle'}
+                  className="flex-1 py-2.5 rounded-xl font-semibold text-sm border border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 transition-colors disabled:opacity-35"
+                  title="Ver payload sem publicar">
+                  🧪 Testar
                 </button>
               </div>
 
-              <a href="https://www.linkedin.com/feed/" target="_blank" rel="noopener noreferrer" onClick={handleCopy}
-                className="w-full py-3 rounded-xl font-semibold text-white text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all"
-                style={{ background: '#0A66C2' }}>
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                </svg>
-                Abrir LinkedIn e colar
-              </a>
+              {/* LinkedIn publish section */}
+              {postState === 'success' ? (
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center"
+                    style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.35)' }}>
+                    <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <p className="text-green-400 font-semibold text-sm">Publicado com sucesso!</p>
+                  {postUrl && (
+                    <a href={postUrl} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-[#5a9fff] hover:underline">
+                      Ver post no LinkedIn →
+                    </a>
+                  )}
+                </div>
+              ) : postState === 'error' ? (
+                <div className="flex flex-col gap-2">
+                  <p className="text-red-400 text-sm text-center">{postError ?? 'Erro ao publicar. Tente novamente.'}</p>
+                  <button onClick={() => setPostState('idle')}
+                    className="w-full py-2.5 rounded-xl font-semibold text-sm border border-white/20 text-white hover:bg-white/10 transition-colors">
+                    Tentar novamente
+                  </button>
+                </div>
+              ) : liStatus === null ? (
+                <div className="h-11 rounded-xl animate-pulse" style={{ background: 'rgba(255,255,255,0.07)' }} />
+              ) : !liStatus.connected ? (
+                <a href={`/api/auth/linkedin/login?returnTo=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/')}`}
+                  className="w-full py-3 rounded-xl font-semibold text-white text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all"
+                  style={{ background: '#0A66C2', boxShadow: '0 4px 14px rgba(10,102,194,0.4)' }}>
+                  <LinkedInIcon className="w-4 h-4 text-white" />
+                  Conectar LinkedIn para publicar
+                </a>
+              ) : (
+                <button onClick={handlePublish} disabled={!editableText.trim() || postState !== 'idle'}
+                  className="w-full py-3 rounded-xl font-semibold text-white text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ background: '#0A66C2', boxShadow: '0 4px 14px rgba(10,102,194,0.4)' }}>
+                  {postState === 'uploading' ? (
+                    <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Enviando imagem…</>
+                  ) : postState === 'posting' ? (
+                    <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Publicando…</>
+                  ) : (
+                    <><LinkedInIcon className="w-4 h-4 text-white" /> Publicar no LinkedIn</>
+                  )}
+                </button>
+              )}
             </motion.div>
           </motion.div>
         )}

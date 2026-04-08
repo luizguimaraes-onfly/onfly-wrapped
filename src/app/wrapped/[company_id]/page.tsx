@@ -209,7 +209,8 @@ export default function CompanyWrappedPage() {
     </div>,
   ]
 
-  const shareText = `🏢 ${data.companyName} em ${label}:\n${data.totalBookings} reservas · R$ ${fmt(Math.round(data.totalSpent))} investidos\n\nOnfly Wrapped — retrospectiva de viagens corporativas.\n\n#OnflyWrapped #ViagensCorporativas #Onfly`
+  const cleanName = (data.companyName ?? '').replace(/[()[\]{}<>'"!?@#$%^&*=+|\\]/g, '').replace(/\s{2,}/g, ' ').trim()
+  const shareText = `${cleanName} fez ${data.totalBookings} reservas e investiu R$ ${fmt(Math.round(data.totalSpent))} em viagens corporativas em ${label}. Esse e o nosso Onfly Wrapped. #OnflyWrapped #ViagensCorporativas #Onfly`
 
   const captionData = {
     type: 'company' as const,

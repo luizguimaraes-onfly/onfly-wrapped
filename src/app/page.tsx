@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ORBS, gradients, cardStyle, primaryButtonStyle, inputBorder } from '@/lib/design'
+import LinkedInConnect from '@/components/linkedin/LinkedInConnect'
 
 const YEARS   = [2025, 2024, 2023]
 const PERIODS = [
@@ -155,6 +156,8 @@ export default function HomePage() {
                 style={{ border: '1.5px solid rgba(13,27,46,0.15)' }}>
                 🏢 Retrospectiva da Empresa
               </button>
+              <LinkedInConnect />
+
               <button onClick={() => signOut({ callbackUrl: '/login' })}
                 className="w-full min-h-[44px] py-2.5 rounded-xl text-sm font-medium text-[#0d1b2e]/45 hover:text-[#0d1b2e]/70 transition-colors">
                 Sair

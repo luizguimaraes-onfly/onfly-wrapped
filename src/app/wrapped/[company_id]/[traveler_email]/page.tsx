@@ -550,7 +550,7 @@ export default function TravelerWrappedPage() {
     </div>,
   ]
 
-  const shareText = `✈️ ${data.totalTrips} viagens, ${data.totalFlightLegs} trechos, ${data.uniqueCities} cidades e ${data.totalNightsAway} noites em ${label}.\n\n${travelerStyle.emoji} ${travelerStyle.style} | ${personality.emoji} ${personality.badge}\n\nEsse é o meu Onfly Wrapped!\n\n#OnflyWrapped #ViagensCorporativas #Onfly`
+  const shareText = `${data.totalTrips} viagens, ${data.totalFlightLegs} trechos de voo e ${data.totalNightsAway} noites de hotel em ${label}. Esse e o meu Onfly Wrapped. #OnflyWrapped #ViagensCorporativas #Onfly`
 
   const captionData = {
     type: 'traveler' as const,
